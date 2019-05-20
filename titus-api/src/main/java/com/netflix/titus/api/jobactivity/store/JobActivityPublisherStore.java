@@ -16,6 +16,7 @@
 
 package com.netflix.titus.api.jobactivity.store;
 
+import com.netflix.titus.api.jobmanager.model.CallMetadata;
 import com.netflix.titus.api.jobmanager.model.job.Job;
 import com.netflix.titus.api.jobmanager.model.job.Task;
 import reactor.core.publisher.Mono;
@@ -27,10 +28,8 @@ import reactor.core.publisher.Mono;
 public interface JobActivityPublisherStore {
 
     // Publishes a single job record
-    // TODO(Andrew L): Add CallMetadata when ready
-     Mono<Void> publishJob(Job<?> job);
+     Mono<Void> publishJob(Job<?> job, CallMetadata callMetadata);
 
      // Publishes a single task record
-     // TODO(Andrew L): Add CallMetadata when ready
-     Mono<Void> publishTask(Task task);
+     Mono<Void> publishTask(Task task, CallMetadata callMetadata);
 }

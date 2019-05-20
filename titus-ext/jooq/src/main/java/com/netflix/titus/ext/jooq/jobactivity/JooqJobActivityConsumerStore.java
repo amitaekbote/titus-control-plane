@@ -23,8 +23,8 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.netflix.titus.api.jobactivity.store.JobActivityConsumerStore;
 import com.netflix.titus.api.jobactivity.store.JobActivityPublisherRecord;
-import com.netflix.titus.api.jobactivity.store.JobActivityPublisherStore;
 import com.netflix.titus.api.jobactivity.store.JobActivityStoreException;
 import com.netflix.titus.api.jobmanager.model.CallMetadata;
 import com.netflix.titus.api.jobmanager.model.job.Job;
@@ -47,10 +47,10 @@ import static com.netflix.titus.ext.jooq.activity.schema.tables.JActivityQueue.A
 import static org.jooq.impl.DSL.max;
 
 /**
- * Implementation of a {@link JobActivityPublisherStore} that persists records in a jOOQ SQL database.
+ * Implementation of a {@link com.netflix.titus.api.jobactivity.store.JobActivityConsumerStore} that persists records in a jOOQ SQL database.
  */
 @Singleton
-public class JooqJobActivityPublisherStore implements JobActivityPublisherStore {
+public class JooqJobActivityConsumerStore implements JobActivityConsumerStore {
     private static final Logger logger = LoggerFactory.getLogger(JooqJobActivityPublisherStore.class);
 
     private static final String JOOQ_METRICS_DATABASE_NAME = "JobActivityPublisher";
@@ -73,14 +73,14 @@ public class JooqJobActivityPublisherStore implements JobActivityPublisherStore 
     private AtomicLong queueIndex;
 
     @Inject
-    public JooqJobActivityPublisherStore(DSLContext dslContext,
+    public JooqJobActivityConsumerStore(DSLContext dslContext,
                                          TitusRuntime runtime,
                                          LogStorageInfo<Task> logStorageInfo) {
         this(dslContext, runtime, logStorageInfo,true);
     }
 
     @VisibleForTesting
-    public JooqJobActivityPublisherStore(DSLContext dslContext, TitusRuntime runtime, LogStorageInfo<Task> logStorageInfo, boolean createIfNotExist) {
+    public JooqJobActivityConsumerStore(DSLContext dslContext, TitusRuntime runtime, LogStorageInfo<Task> logStorageInfo, boolean createIfNotExist) {
         this.logStorageInfo = logStorageInfo;
         this.dslContext = dslContext;
         this.databaseMetrics = new DatabaseMetrics(runtime.getRegistry(), JOOQ_METRICS_DATABASE_NAME);
@@ -137,36 +137,14 @@ public class JooqJobActivityPublisherStore implements JobActivityPublisherStore 
     }
 
     @Override
-    public Mono<Void> publishJob(Job<?> job, CallMetadata callMetadata) {
-        return publishByteString(JobActivityPublisherRecord.RecordType.JOB, job.getId(),
-                JobActivityPublisherRecordUtils.jobToByteArry(job));
+    public Mono<Void> consumeJob(Job job, CallMetadata callMetadata) {
+        return;
     }
 
     @Override
-    public Mono<Void> publishTask(Task task, CallMetadata callMetadata) {
+    public Mono<Void> consumeTask(Task task, CallMetadata callMetadata) {
         return publishByteString(JobActivityPublisherRecord.RecordType.TASK, task.getId(),
                 JobActivityPublisherRecordUtils.taskToByteArray(task, logStorageInfo));
-    }
-
-    private Mono<Void> publishByteString(JobActivityPublisherRecord.RecordType recordType, String recordId, byte[] serializedRecord) {
-        long assignedQueueIndex = queueIndex.getAndIncrement();
-
-        return JooqUtils.executeAsyncMono(() -> {
-            long startTimeMs = System.currentTimeMillis();
-            int numInserts = dslContext
-                    .insertInto(ACTIVITY_QUEUE,
-                            ACTIVITY_QUEUE.QUEUE_INDEX,
-                            ACTIVITY_QUEUE.EVENT_TYPE,
-                            ACTIVITY_QUEUE.SERIALIZED_EVENT)
-                    .values(assignedQueueIndex,
-                            (short) recordType.ordinal(),
-                            serializedRecord)
-                    .execute();
-            databaseMetrics.registerInsertLatency(startTimeMs, 1, Collections.emptyList());
-            return numInserts;
-        }, dslContext)
-                .onErrorMap(e -> JobActivityStoreException.jobActivityUpdateRecordException(recordId, e))
-                .then();
     }
 
     @VisibleForTesting

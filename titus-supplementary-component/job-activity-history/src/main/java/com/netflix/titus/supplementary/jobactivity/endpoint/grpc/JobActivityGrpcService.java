@@ -32,4 +32,5 @@ public class JobActivityGrpcService extends JobActivityServiceGrpc.JobActivitySe
         responseObserver.onNext(TestData.newJobActivityQueryResult());
         responseObserver.onCompleted();
     }
+
 }

@@ -29,6 +29,14 @@ message JobActivityRecord {
     uint64 timestamp = 4;
 }
 
+message TaskActivityRecord {
+    CallMetadata callMetdata = 1;
+    message Change {
+        Job job = 2;
+        Task task = 3;
+    }
+    uint64 timestamp = 4;
+}
 // ----------------------------------------------------------------------------
 // Service
 
@@ -38,6 +46,10 @@ message JobActivityQuery {
 
 message JobActivityQueryResult {
     repeated JobActivityRecord records = 1;
+}
+
+message TaskActivityQueryResult {
+    repeated TaskActivityRecord records = 1;
 }
 
 service JobActivityService {
